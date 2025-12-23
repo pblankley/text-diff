@@ -67,16 +67,19 @@ export const TextEditor: React.FC<TextEditorProps> = ({
 
     diffLines.forEach((diffLine, lineIndex) => {
       diffLine.segments.forEach((segment) => {
-        const span = document.createElement('span');
-
-        if (segment.type === 'added') {
-          span.className = 'bg-diff-added text-green-900';
-        } else if (segment.type === 'removed') {
-          span.className = 'bg-diff-removed text-red-900';
+        // Only wrap in span if the segment needs highlighting
+        // Plain text nodes for unchanged content work better with contentEditable
+        if (segment.type === 'added' || segment.type === 'removed') {
+          const span = document.createElement('span');
+          span.className = segment.type === 'added' 
+            ? 'bg-diff-added text-green-900' 
+            : 'bg-diff-removed text-red-900';
+          span.textContent = segment.text;
+          fragment.appendChild(span);
+        } else {
+          // Unchanged text as plain text node - better for cursor positioning
+          fragment.appendChild(document.createTextNode(segment.text));
         }
-
-        span.textContent = segment.text;
-        fragment.appendChild(span);
       });
 
       // Add newline between lines (except for the last line)
@@ -86,6 +89,9 @@ export const TextEditor: React.FC<TextEditorProps> = ({
     });
 
     editor.appendChild(fragment);
+    
+    // Normalize the DOM to merge adjacent text nodes - helps with cursor positioning
+    editor.normalize();
 
     // Restore focus and cursor position
     try {
