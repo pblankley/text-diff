@@ -4,6 +4,18 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'Text Diff Viewer',
   description: 'Beautiful side-by-side text diff viewer with GitHub-style colors',
+  icons: {
+    icon: [
+      {
+        url: '/diff-logo-dark.png',
+        media: '(prefers-color-scheme: light)',
+      },
+      {
+        url: '/diff-logo-light.png',
+        media: '(prefers-color-scheme: dark)',
+      },
+    ],
+  },
 };
 
 export default function RootLayout({

@@ -32,19 +32,26 @@ export const TextEditor: React.FC<TextEditorProps> = ({
     onChange(newValue);
   }, [onChange]);
 
-  // Update contentEditable with diff highlights
+  // Apply diff highlights ONLY when diffLines changes (after debounce completes)
+  // This lets the user type freely without DOM rebuilds interrupting them
   useEffect(() => {
     const editor = editorRef.current;
-    if (!editor || isUpdatingRef.current) return;
+    if (!editor) return;
+    
+    // Skip if there are no diff lines - let the contentEditable work naturally
+    if (diffLines.length === 0) return;
 
     isUpdatingRef.current = true;
 
     // Save cursor position and focus state
     const selection = window.getSelection();
     let cursorOffset = 0;
-    const hadFocus = document.activeElement === editor;
+    
+    const isActiveElement = document.activeElement === editor;
+    const selectionInEditor = selection && selection.rangeCount > 0 && editor.contains(selection.anchorNode);
+    const shouldRestoreFocus = isActiveElement || selectionInEditor;
 
-    if (selection && selection.rangeCount > 0 && editor.contains(selection.anchorNode)) {
+    if (selectionInEditor) {
       const range = selection.getRangeAt(0);
 
       // Calculate absolute cursor position in the text
@@ -54,41 +61,35 @@ export const TextEditor: React.FC<TextEditorProps> = ({
       cursorOffset = preCaretRange.toString().length;
     }
 
-    // Update content with highlights
+    // Rebuild content with diff highlights
     editor.innerHTML = '';
     const fragment = document.createDocumentFragment();
 
-    if (diffLines.length === 0 && value) {
-      // No diff lines yet, just show plain text
-      fragment.appendChild(document.createTextNode(value));
-    } else {
-      diffLines.forEach((diffLine, lineIndex) => {
-        diffLine.segments.forEach((segment) => {
-          const span = document.createElement('span');
+    diffLines.forEach((diffLine, lineIndex) => {
+      diffLine.segments.forEach((segment) => {
+        const span = document.createElement('span');
 
-          if (segment.type === 'added') {
-            span.className = 'bg-diff-added text-green-900';
-          } else if (segment.type === 'removed') {
-            span.className = 'bg-diff-removed text-red-900';
-          }
-
-          span.textContent = segment.text;
-          fragment.appendChild(span);
-        });
-
-        // Add newline between lines (except for the last line)
-        if (lineIndex < diffLines.length - 1) {
-          fragment.appendChild(document.createTextNode('\n'));
+        if (segment.type === 'added') {
+          span.className = 'bg-diff-added text-green-900';
+        } else if (segment.type === 'removed') {
+          span.className = 'bg-diff-removed text-red-900';
         }
+
+        span.textContent = segment.text;
+        fragment.appendChild(span);
       });
-    }
+
+      // Add newline between lines (except for the last line)
+      if (lineIndex < diffLines.length - 1) {
+        fragment.appendChild(document.createTextNode('\n'));
+      }
+    });
 
     editor.appendChild(fragment);
 
     // Restore focus and cursor position
     try {
-      // Restore focus first if the editor had focus
-      if (hadFocus) {
+      if (shouldRestoreFocus) {
         editor.focus();
       }
 
@@ -132,12 +133,15 @@ export const TextEditor: React.FC<TextEditorProps> = ({
       newSelection?.removeAllRanges();
       newSelection?.addRange(newRange);
     } catch (e) {
-      // Cursor restoration failed, ignore
+      // Cursor restoration failed, but still try to maintain focus
       console.error('Cursor restoration error:', e);
+      if (shouldRestoreFocus) {
+        editor.focus();
+      }
     }
 
     isUpdatingRef.current = false;
-  }, [diffLines, value]);
+  }, [diffLines]); // Only rebuild when diffLines changes, NOT on every keystroke
 
   // Sync scroll with line numbers
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
