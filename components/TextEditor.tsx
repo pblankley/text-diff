@@ -39,15 +39,13 @@ export const TextEditor: React.FC<TextEditorProps> = ({
 
     isUpdatingRef.current = true;
 
-    // Save cursor position
+    // Save cursor position and focus state
     const selection = window.getSelection();
     let cursorOffset = 0;
-    let cursorNode: Node | null = null;
+    const hadFocus = document.activeElement === editor;
 
     if (selection && selection.rangeCount > 0 && editor.contains(selection.anchorNode)) {
       const range = selection.getRangeAt(0);
-      cursorNode = range.startContainer;
-      cursorOffset = range.startOffset;
 
       // Calculate absolute cursor position in the text
       const preCaretRange = range.cloneRange();
@@ -87,8 +85,13 @@ export const TextEditor: React.FC<TextEditorProps> = ({
 
     editor.appendChild(fragment);
 
-    // Restore cursor position
+    // Restore focus and cursor position
     try {
+      // Restore focus first if the editor had focus
+      if (hadFocus) {
+        editor.focus();
+      }
+
       const newSelection = window.getSelection();
       const newRange = document.createRange();
 
@@ -116,14 +119,14 @@ export const TextEditor: React.FC<TextEditorProps> = ({
         return false;
       };
 
-      if (cursorOffset > 0 && editor.childNodes.length > 0) {
+      if (editor.childNodes.length > 0) {
         findPosition(editor);
       }
 
       if (!foundPosition) {
-        // Default to end of content
+        // Default to start of content when cursor is at position 0, otherwise end
         newRange.selectNodeContents(editor);
-        newRange.collapse(false);
+        newRange.collapse(cursorOffset === 0);
       }
 
       newSelection?.removeAllRanges();

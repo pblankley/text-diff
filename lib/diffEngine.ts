@@ -61,8 +61,8 @@ function processDiffs(
     if (!text) continue;
 
     const lines = text.split('\n');
-    // Remove empty last element if text doesn't end with newline
-    if (lines[lines.length - 1] === '' && !text.endsWith('\n')) {
+    // Remove empty last element created by trailing newline
+    if (lines.length > 1 && lines[lines.length - 1] === '' && text.endsWith('\n')) {
       lines.pop();
     }
 
