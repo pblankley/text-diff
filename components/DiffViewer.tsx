@@ -16,7 +16,7 @@ export const DiffViewer: React.FC = () => {
       <header className="flex-shrink-0 px-6 py-4 bg-white border-b border-gray-300">
         <h1 className="text-2xl font-bold text-gray-800">Text Diff Viewer</h1>
         <p className="text-sm text-gray-600 mt-1">
-          Paste text into either side to see differences
+          Edit text on either side - differences are highlighted in real-time
           {isComputing && <span className="ml-2 text-blue-600">(Computing...)</span>}
         </p>
       </header>
@@ -28,7 +28,7 @@ export const DiffViewer: React.FC = () => {
             value={leftText}
             onChange={setLeftText}
             diffLines={diffResult.leftLines}
-            label="Original"
+            label="Text 1"
             side="left"
           />
         </div>
@@ -38,7 +38,7 @@ export const DiffViewer: React.FC = () => {
             value={rightText}
             onChange={setRightText}
             diffLines={diffResult.rightLines}
-            label="Modified"
+            label="Text 2"
             side="right"
           />
         </div>

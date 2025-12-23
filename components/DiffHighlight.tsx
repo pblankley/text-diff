@@ -8,7 +8,7 @@ interface DiffHighlightProps {
 
 export const DiffHighlight: React.FC<DiffHighlightProps> = ({ segments, side }) => {
   return (
-    <span className="whitespace-pre-wrap break-words">
+    <>
       {segments.map((segment, idx) => {
         let className = '';
 
@@ -24,6 +24,6 @@ export const DiffHighlight: React.FC<DiffHighlightProps> = ({ segments, side }) 
           </span>
         );
       })}
-    </span>
+    </>
   );
 };
