@@ -73,7 +73,7 @@ export const DiffViewer: React.FC = () => {
 
   return (
     <div 
-      className="min-h-screen flex flex-col"
+      className="h-screen flex flex-col overflow-hidden"
       style={{ backgroundColor: 'var(--bg-secondary)' }}
     >
       {/* Header */}
@@ -127,15 +127,14 @@ export const DiffViewer: React.FC = () => {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 px-6 pb-6">
+      <main className="flex-1 px-6 min-h-0">
         <div 
-          className="h-full rounded-2xl overflow-hidden flex flex-col"
+          className="h-full rounded-xl overflow-hidden flex flex-col"
           style={{ 
             backgroundColor: 'var(--bg-primary)',
             boxShadow: isDark 
-              ? '0 0 0 1px rgba(255, 255, 255, 0.06), 0 8px 40px rgba(0, 0, 0, 0.5)' 
-              : '0 0 0 1px rgba(0, 0, 0, 0.04), 0 8px 40px rgba(0, 0, 0, 0.08)',
-            minHeight: 'calc(100vh - 120px)'
+              ? '0 0 0 1px rgba(255, 255, 255, 0.06), 0 4px 24px rgba(0, 0, 0, 0.4)' 
+              : '0 0 0 1px rgba(0, 0, 0, 0.04), 0 4px 24px rgba(0, 0, 0, 0.06)',
           }}
         >
           {/* Panel Headers */}
@@ -144,34 +143,34 @@ export const DiffViewer: React.FC = () => {
             style={{ borderColor: 'var(--border-color)' }}
           >
             <div 
-              className="px-5 py-3 border-r flex items-center justify-between"
+              className="px-4 py-2 border-r flex items-center justify-between"
               style={{ borderColor: 'var(--border-color)' }}
             >
               <span 
-                className="text-xs font-medium uppercase tracking-wide"
+                className="text-[11px] font-medium uppercase tracking-wider"
                 style={{ color: 'var(--text-secondary)' }}
               >
                 Original
               </span>
               {leftText && (
                 <span 
-                  className="text-xs tabular-nums"
+                  className="text-[11px] tabular-nums"
                   style={{ color: 'var(--text-tertiary)' }}
                 >
                   {leftText.split('\n').length} lines
                 </span>
               )}
             </div>
-            <div className="px-5 py-3 flex items-center justify-between">
+            <div className="px-4 py-2 flex items-center justify-between">
               <span 
-                className="text-xs font-medium uppercase tracking-wide"
+                className="text-[11px] font-medium uppercase tracking-wider"
                 style={{ color: 'var(--text-secondary)' }}
               >
                 Modified
               </span>
               {rightText && (
                 <span 
-                  className="text-xs tabular-nums"
+                  className="text-[11px] tabular-nums"
                   style={{ color: 'var(--text-tertiary)' }}
                 >
                   {rightText.split('\n').length} lines
@@ -213,14 +212,12 @@ export const DiffViewer: React.FC = () => {
       </main>
 
       {/* Keyboard hint */}
-      <footer className="flex-shrink-0 px-6 pb-4">
+      <footer className="flex-shrink-0 py-4">
         <p 
-          className="text-center text-xs"
-          style={{ color: 'var(--text-tertiary)' }}
+          className="text-center text-[11px]"
+          style={{ color: 'var(--text-tertiary)', opacity: 0.6 }}
         >
-          <span style={{ opacity: 0.7 }}>
-            Differences are highlighted when you click outside the editor
-          </span>
+          Differences are highlighted when you click outside the editor
         </p>
       </footer>
     </div>
