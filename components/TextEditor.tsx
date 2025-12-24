@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useCallback, useEffect } from 'react';
+import React, { useRef, useCallback, useEffect, useState } from 'react';
 import { DiffLine } from '@/lib/types';
 
 interface TextEditorProps {
@@ -9,6 +9,7 @@ interface TextEditorProps {
   diffLines: DiffLine[];
   label: string;
   side: 'left' | 'right';
+  placeholder?: string;
 }
 
 export const TextEditor: React.FC<TextEditorProps> = ({
@@ -16,10 +17,12 @@ export const TextEditor: React.FC<TextEditorProps> = ({
   onChange,
   diffLines,
   label,
-  side
+  side,
+  placeholder = 'Enter text...'
 }) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const isUpdatingRef = useRef(false);
+  const [isEmpty, setIsEmpty] = useState(true);
 
   // Handle content changes from contentEditable
   const handleInput = useCallback(() => {
@@ -29,21 +32,24 @@ export const TextEditor: React.FC<TextEditorProps> = ({
     if (!editor) return;
 
     const newValue = editor.innerText;
+    setIsEmpty(!newValue || newValue === '\n');
     onChange(newValue);
   }, [onChange]);
 
+  // Track empty state
+  useEffect(() => {
+    setIsEmpty(!value);
+  }, [value]);
+
   // Apply diff highlights ONLY when diffLines changes (after debounce completes)
-  // This lets the user type freely without DOM rebuilds interrupting them
   useEffect(() => {
     const editor = editorRef.current;
     if (!editor) return;
     
-    // Skip if there are no diff lines - let the contentEditable work naturally
     if (diffLines.length === 0) return;
 
     isUpdatingRef.current = true;
 
-    // Save cursor position and focus state
     const selection = window.getSelection();
     let cursorOffset = 0;
     
@@ -53,47 +59,35 @@ export const TextEditor: React.FC<TextEditorProps> = ({
 
     if (selectionInEditor) {
       const range = selection.getRangeAt(0);
-
-      // Calculate absolute cursor position in the text
       const preCaretRange = range.cloneRange();
       preCaretRange.selectNodeContents(editor);
       preCaretRange.setEnd(range.startContainer, range.startOffset);
       cursorOffset = preCaretRange.toString().length;
     }
 
-    // Rebuild content with diff highlights
     editor.innerHTML = '';
     const fragment = document.createDocumentFragment();
 
     diffLines.forEach((diffLine, lineIndex) => {
       diffLine.segments.forEach((segment) => {
-        // Only wrap in span if the segment needs highlighting
-        // Plain text nodes for unchanged content work better with contentEditable
         if (segment.type === 'added' || segment.type === 'removed') {
           const span = document.createElement('span');
-          span.className = segment.type === 'added' 
-            ? 'bg-diff-added text-green-900' 
-            : 'bg-diff-removed text-red-900';
+          span.className = segment.type === 'added' ? 'diff-added' : 'diff-removed';
           span.textContent = segment.text;
           fragment.appendChild(span);
         } else {
-          // Unchanged text as plain text node - better for cursor positioning
           fragment.appendChild(document.createTextNode(segment.text));
         }
       });
 
-      // Add newline between lines (except for the last line)
       if (lineIndex < diffLines.length - 1) {
         fragment.appendChild(document.createTextNode('\n'));
       }
     });
 
     editor.appendChild(fragment);
-    
-    // Normalize the DOM to merge adjacent text nodes - helps with cursor positioning
     editor.normalize();
 
-    // Restore focus and cursor position
     try {
       if (shouldRestoreFocus) {
         editor.focus();
@@ -102,7 +96,6 @@ export const TextEditor: React.FC<TextEditorProps> = ({
       const newSelection = window.getSelection();
       const newRange = document.createRange();
 
-      // Find the position in the new DOM
       let charCount = 0;
       let foundPosition = false;
 
@@ -131,7 +124,6 @@ export const TextEditor: React.FC<TextEditorProps> = ({
       }
 
       if (!foundPosition) {
-        // Default to start of content when cursor is at position 0, otherwise end
         newRange.selectNodeContents(editor);
         newRange.collapse(cursorOffset === 0);
       }
@@ -139,7 +131,6 @@ export const TextEditor: React.FC<TextEditorProps> = ({
       newSelection?.removeAllRanges();
       newSelection?.addRange(newRange);
     } catch (e) {
-      // Cursor restoration failed, but still try to maintain focus
       console.error('Cursor restoration error:', e);
       if (shouldRestoreFocus) {
         editor.focus();
@@ -147,9 +138,8 @@ export const TextEditor: React.FC<TextEditorProps> = ({
     }
 
     isUpdatingRef.current = false;
-  }, [diffLines]); // Only rebuild when diffLines changes, NOT on every keystroke
+  }, [diffLines]);
 
-  // Sync scroll with line numbers
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     const lineNumbers = document.getElementById(`line-numbers-${side}`);
     if (lineNumbers) {
@@ -157,21 +147,38 @@ export const TextEditor: React.FC<TextEditorProps> = ({
     }
   }, [side]);
 
-  // Generate line number display based on actual text content
   const lines = value.split('\n');
   const lineCount = Math.max(lines.length, 1);
 
-  // Build a map of line numbers to diff types for coloring
   const lineDiffMap = new Map<number, 'added' | 'removed' | 'unchanged'>();
   diffLines.forEach(dl => {
     lineDiffMap.set(dl.lineNumber, dl.type);
   });
 
   return (
-    <div className="flex flex-col h-full border-r border-gray-300 last:border-r-0">
+    <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="px-4 py-2 bg-gray-100 border-b border-gray-300 font-semibold text-gray-700">
-        {label}
+      <div 
+        className="px-4 py-3 border-b flex items-center justify-between"
+        style={{ 
+          backgroundColor: 'var(--bg-secondary)',
+          borderColor: 'var(--border-color)'
+        }}
+      >
+        <span 
+          className="text-sm font-semibold tracking-tight"
+          style={{ color: 'var(--text-primary)' }}
+        >
+          {label}
+        </span>
+        {value && (
+          <span 
+            className="text-xs tabular-nums"
+            style={{ color: 'var(--text-tertiary)' }}
+          >
+            {lineCount} {lineCount === 1 ? 'line' : 'lines'}
+          </span>
+        )}
       </div>
 
       {/* Editor Area */}
@@ -179,8 +186,12 @@ export const TextEditor: React.FC<TextEditorProps> = ({
         {/* Line Numbers */}
         <div
           id={`line-numbers-${side}`}
-          className="flex-shrink-0 w-12 bg-gray-50 border-r border-gray-300 overflow-hidden text-right pr-2 py-3 text-sm text-gray-500 select-none font-mono"
-          style={{ overflowY: 'hidden' }}
+          className="flex-shrink-0 w-14 overflow-hidden text-right pr-3 py-4 select-none font-mono text-xs"
+          style={{ 
+            backgroundColor: 'var(--line-number-bg)',
+            overflowY: 'hidden',
+            borderRight: '1px solid var(--border-color)'
+          }}
         >
           {Array.from({ length: lineCount }, (_, i) => {
             const lineNum = i + 1;
@@ -188,10 +199,11 @@ export const TextEditor: React.FC<TextEditorProps> = ({
             return (
               <div
                 key={lineNum}
-                className={`leading-6 ${
-                  diffType === 'added' ? 'bg-diff-added' :
-                  diffType === 'removed' ? 'bg-diff-removed' : ''
+                className={`leading-6 px-1 ${
+                  diffType === 'added' ? 'line-added' :
+                  diffType === 'removed' ? 'line-removed' : ''
                 }`}
+                style={{ color: 'var(--line-number-text)' }}
               >
                 {lineNum}
               </div>
@@ -199,17 +211,31 @@ export const TextEditor: React.FC<TextEditorProps> = ({
           })}
         </div>
 
-        {/* ContentEditable Editor with Inline Diff Highlighting */}
-        <div className="flex-1 overflow-auto">
+        {/* Editor Container */}
+        <div className="flex-1 overflow-auto editor-scroll relative">
+          {/* Placeholder */}
+          {isEmpty && (
+            <div 
+              className="absolute top-4 left-4 pointer-events-none font-mono text-sm"
+              style={{ color: 'var(--text-tertiary)' }}
+            >
+              {placeholder}
+            </div>
+          )}
+          
+          {/* ContentEditable Editor */}
           <div
             ref={editorRef}
             contentEditable
             onInput={handleInput}
             onScroll={handleScroll}
-            className="w-full h-full outline-none py-3 px-3 font-mono text-sm leading-6 whitespace-pre-wrap break-words"
+            className="w-full h-full outline-none py-4 px-4 font-mono text-sm leading-6 whitespace-pre-wrap"
             style={{
               minHeight: '100%',
-              wordBreak: 'break-word'
+              wordBreak: 'break-word',
+              color: 'var(--text-primary)',
+              backgroundColor: 'var(--bg-editor)',
+              caretColor: 'var(--accent)'
             }}
             spellCheck={false}
             suppressContentEditableWarning

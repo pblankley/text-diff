@@ -2,6 +2,57 @@
 @tailwind components;
 @tailwind utilities;
 
+/* CSS Variables for theming */
+:root {
+  --bg-primary: #FFFFFF;
+  --bg-secondary: #F5F5F7;
+  --bg-tertiary: #E8E8ED;
+  --bg-editor: #FFFFFF;
+  --text-primary: #1D1D1F;
+  --text-secondary: #6E6E73;
+  --text-tertiary: #AEAEB2;
+  --border-color: rgba(0, 0, 0, 0.08);
+  --border-color-strong: rgba(0, 0, 0, 0.12);
+  --accent: #007AFF;
+  --accent-hover: #0056CC;
+  
+  /* Diff colors */
+  --diff-added-bg: rgba(52, 199, 89, 0.18);
+  --diff-added-text: #1D7A34;
+  --diff-removed-bg: rgba(255, 59, 48, 0.14);
+  --diff-removed-text: #C41E10;
+  
+  /* Line numbers */
+  --line-number-bg: #FAFAFA;
+  --line-number-text: #AEAEB2;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-primary: #1C1C1E;
+    --bg-secondary: #2C2C2E;
+    --bg-tertiary: #3A3A3C;
+    --bg-editor: #1C1C1E;
+    --text-primary: #F5F5F7;
+    --text-secondary: #AEAEB2;
+    --text-tertiary: #636366;
+    --border-color: rgba(255, 255, 255, 0.08);
+    --border-color-strong: rgba(255, 255, 255, 0.12);
+    --accent: #0A84FF;
+    --accent-hover: #409CFF;
+    
+    /* Diff colors - dark mode */
+    --diff-added-bg: rgba(48, 209, 88, 0.22);
+    --diff-added-text: #30D158;
+    --diff-removed-bg: rgba(255, 69, 58, 0.2);
+    --diff-removed-text: #FF6961;
+    
+    /* Line numbers */
+    --line-number-bg: #252528;
+    --line-number-text: #636366;
+  }
+}
+
 * {
   box-sizing: border-box;
   padding: 0;
@@ -16,28 +67,112 @@ body {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: 'SF Pro Display', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 
+    system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  font-feature-settings: 'kern' 1, 'liga' 1;
+  letter-spacing: -0.01em;
 }
 
-/* Custom scrollbar for better aesthetics */
+/* Apple-style scrollbar */
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #888;
-  border-radius: 5px;
+  background: var(--text-tertiary);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  background: var(--text-secondary);
+  background-clip: padding-box;
+}
+
+/* Hide scrollbar when not hovering (Apple-style) */
+.editor-scroll::-webkit-scrollbar-thumb {
+  background: transparent;
+}
+
+.editor-scroll:hover::-webkit-scrollbar-thumb {
+  background: var(--text-tertiary);
+  background-clip: padding-box;
+}
+
+/* Diff highlighting classes */
+.diff-added {
+  background-color: var(--diff-added-bg);
+  color: var(--diff-added-text);
+  border-radius: 3px;
+  padding: 0 1px;
+}
+
+.diff-removed {
+  background-color: var(--diff-removed-bg);
+  color: var(--diff-removed-text);
+  border-radius: 3px;
+  padding: 0 1px;
+}
+
+/* Line highlight for diff */
+.line-added {
+  background-color: var(--diff-added-bg);
+}
+
+.line-removed {
+  background-color: var(--diff-removed-bg);
+}
+
+/* Focus ring Apple style */
+.focus-ring:focus {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.3);
+}
+
+/* Glass effect for header */
+.glass-effect {
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+}
+
+/* Smooth transitions */
+* {
+  transition-property: background-color, border-color, color, box-shadow;
+  transition-duration: 0.2s;
+  transition-timing-function: ease-out;
+}
+
+/* Prevent transition on page load */
+.preload * {
+  transition: none !important;
+}
+
+/* Editor placeholder */
+.editor-placeholder::before {
+  content: attr(data-placeholder);
+  color: var(--text-tertiary);
+  pointer-events: none;
+  position: absolute;
+  font-style: italic;
+}
+
+/* Selection color */
+::selection {
+  background-color: rgba(0, 122, 255, 0.3);
+}
+
+@media (prefers-color-scheme: dark) {
+  ::selection {
+    background-color: rgba(10, 132, 255, 0.4);
+  }
 }
