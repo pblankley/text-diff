@@ -60,33 +60,49 @@ function processDiffs(
   // Track current line segments for both sides
   let leftCurrentSegments: DiffSegment[] = [];
   let rightCurrentSegments: DiffSegment[] = [];
+  
+  // Track the dominant type for the current line (for empty lines that need highlighting)
+  let leftLineType: 'unchanged' | 'removed' = 'unchanged';
+  let rightLineType: 'unchanged' | 'added' = 'unchanged';
 
-  // Helper to finalize a line
-  const finalizeLeftLine = () => {
-    if (leftCurrentSegments.length > 0) {
+  // Helper to finalize a line (including empty lines)
+  const finalizeLeftLine = (hasNewline: boolean = false) => {
+    // Only create a line if we have segments OR we hit a newline (empty line)
+    if (leftCurrentSegments.length > 0 || hasNewline) {
       const content = leftCurrentSegments.map(s => s.text).join('');
-      const hasChanges = leftCurrentSegments.some(s => s.type !== 'unchanged');
+      const hasChanges = leftCurrentSegments.some(s => s.type !== 'unchanged') || leftLineType === 'removed';
+      
+      // For empty lines, use the tracked line type
+      const emptySegmentType = leftLineType;
+      
       leftResult.push({
         lineNumber: leftLineNum++,
         content,
         type: hasChanges ? 'removed' : 'unchanged',
-        segments: [...leftCurrentSegments]
+        segments: leftCurrentSegments.length > 0 ? [...leftCurrentSegments] : [{ text: '', type: emptySegmentType }]
       });
       leftCurrentSegments = [];
+      leftLineType = 'unchanged';
     }
   };
 
-  const finalizeRightLine = () => {
-    if (rightCurrentSegments.length > 0) {
+  const finalizeRightLine = (hasNewline: boolean = false) => {
+    // Only create a line if we have segments OR we hit a newline (empty line)
+    if (rightCurrentSegments.length > 0 || hasNewline) {
       const content = rightCurrentSegments.map(s => s.text).join('');
-      const hasChanges = rightCurrentSegments.some(s => s.type !== 'unchanged');
+      const hasChanges = rightCurrentSegments.some(s => s.type !== 'unchanged') || rightLineType === 'added';
+      
+      // For empty lines, use the tracked line type
+      const emptySegmentType = rightLineType;
+      
       rightResult.push({
         lineNumber: rightLineNum++,
         content,
         type: hasChanges ? 'added' : 'unchanged',
-        segments: [...rightCurrentSegments]
+        segments: rightCurrentSegments.length > 0 ? [...rightCurrentSegments] : [{ text: '', type: emptySegmentType }]
       });
       rightCurrentSegments = [];
+      rightLineType = 'unchanged';
     }
   };
 
@@ -108,26 +124,28 @@ function processDiffs(
         }
         // If not the last part, we hit a newline - finalize both lines
         if (!isLastPart) {
-          finalizeLeftLine();
-          finalizeRightLine();
+          finalizeLeftLine(true);
+          finalizeRightLine(true);
         }
       } else if (operation === -1) {
         // DELETE - add to left side only
+        leftLineType = 'removed'; // Mark this line as having removed content
         if (part) {
           leftCurrentSegments.push({ text: part, type: 'removed' });
         }
         // If not the last part, we hit a newline - finalize left line only
         if (!isLastPart) {
-          finalizeLeftLine();
+          finalizeLeftLine(true);
         }
       } else if (operation === 1) {
         // INSERT - add to right side only
+        rightLineType = 'added'; // Mark this line as having added content
         if (part) {
           rightCurrentSegments.push({ text: part, type: 'added' });
         }
         // If not the last part, we hit a newline - finalize right line only
         if (!isLastPart) {
-          finalizeRightLine();
+          finalizeRightLine(true);
         }
       }
     }

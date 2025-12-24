@@ -75,16 +75,20 @@ export const TextEditor: React.FC<TextEditorProps> = ({
 
     currentDiffLines.forEach((diffLine, lineIndex) => {
       diffLine.segments.forEach((segment) => {
-        if (segment.type === 'added' || segment.type === 'removed') {
-          const span = document.createElement('span');
-          span.className = segment.type === 'added' ? 'diff-added' : 'diff-removed';
-          span.textContent = segment.text;
-          fragment.appendChild(span);
-        } else {
-          fragment.appendChild(document.createTextNode(segment.text));
+        // Only create nodes for segments with actual text content
+        if (segment.text) {
+          if (segment.type === 'added' || segment.type === 'removed') {
+            const span = document.createElement('span');
+            span.className = segment.type === 'added' ? 'diff-added' : 'diff-removed';
+            span.textContent = segment.text;
+            fragment.appendChild(span);
+          } else {
+            fragment.appendChild(document.createTextNode(segment.text));
+          }
         }
       });
 
+      // Add newline between lines (this preserves empty lines)
       if (lineIndex < currentDiffLines.length - 1) {
         fragment.appendChild(document.createTextNode('\n'));
       }
