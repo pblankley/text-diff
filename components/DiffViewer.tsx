@@ -1,26 +1,75 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { useDiff } from '@/hooks/useDiff';
 import { TextEditor } from './TextEditor';
+import { ThemeToggle } from './ThemeToggle';
+
+type Theme = 'light' | 'dark' | 'system';
 
 export const DiffViewer: React.FC = () => {
   const [leftText, setLeftText] = useState('');
   const [rightText, setRightText] = useState('');
+  const [theme, setTheme] = useState<Theme>('system');
   const [isDark, setIsDark] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   const { diffResult, isComputing, triggerImmediateDiff } = useDiff(leftText, rightText);
 
-  // Detect system color scheme
+  // Initialize theme from localStorage and system preference
   useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    setIsDark(mediaQuery.matches);
+    setMounted(true);
+    const stored = localStorage.getItem('theme') as Theme | null;
+    if (stored && (stored === 'light' || stored === 'dark')) {
+      setTheme(stored);
+    }
+  }, []);
 
-    const handler = (e: MediaQueryListEvent) => setIsDark(e.matches);
+  // Apply theme to document and compute isDark
+  useEffect(() => {
+    if (!mounted) return;
+
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    
+    const applyTheme = () => {
+      let dark: boolean;
+      if (theme === 'system') {
+        dark = mediaQuery.matches;
+      } else {
+        dark = theme === 'dark';
+      }
+      
+      setIsDark(dark);
+      
+      // Apply class to html element
+      if (dark) {
+        document.documentElement.classList.add('dark');
+        document.documentElement.classList.remove('light');
+      } else {
+        document.documentElement.classList.add('light');
+        document.documentElement.classList.remove('dark');
+      }
+    };
+
+    applyTheme();
+
+    // Listen for system preference changes (only matters if theme is 'system')
+    const handler = () => {
+      if (theme === 'system') {
+        applyTheme();
+      }
+    };
+    
     mediaQuery.addEventListener('change', handler);
     return () => mediaQuery.removeEventListener('change', handler);
-  }, []);
+  }, [theme, mounted]);
+
+  const toggleTheme = useCallback(() => {
+    const newTheme = isDark ? 'light' : 'dark';
+    setTheme(newTheme);
+    localStorage.setItem('theme', newTheme);
+  }, [isDark]);
 
   return (
     <div 
@@ -56,8 +105,8 @@ export const DiffViewer: React.FC = () => {
             </div>
           </div>
 
-          {/* Status indicator */}
-          <div className="flex items-center gap-2">
+          {/* Status indicator and theme toggle */}
+          <div className="flex items-center gap-4">
             {isComputing && (
               <div className="flex items-center gap-2">
                 <div 
@@ -72,6 +121,7 @@ export const DiffViewer: React.FC = () => {
                 </span>
               </div>
             )}
+            {mounted && <ThemeToggle isDark={isDark} onToggle={toggleTheme} />}
           </div>
         </div>
       </header>

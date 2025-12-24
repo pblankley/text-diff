@@ -34,8 +34,41 @@
   --line-number-text: #AEAEB2;
 }
 
+/* Dark mode - triggered by .dark class on html element */
+.dark {
+  /* Backgrounds */
+  --bg-primary: #1C1C1E;
+  --bg-secondary: #000000;
+  --bg-tertiary: #2C2C2E;
+  --bg-editor: #1C1C1E;
+  
+  /* Text */
+  --text-primary: #F5F5F7;
+  --text-secondary: #98989D;
+  --text-tertiary: #636366;
+  
+  /* Borders */
+  --border-color: rgba(255, 255, 255, 0.06);
+  --border-color-strong: rgba(255, 255, 255, 0.1);
+  
+  /* Accent */
+  --accent: #0A84FF;
+  --accent-hover: #409CFF;
+  
+  /* Diff colors - dark mode optimized */
+  --diff-added-bg: rgba(48, 209, 88, 0.18);
+  --diff-added-text: #32D74B;
+  --diff-removed-bg: rgba(255, 69, 58, 0.16);
+  --diff-removed-text: #FF6961;
+  
+  /* Line numbers */
+  --line-number-bg: #141415;
+  --line-number-text: #48484A;
+}
+
+/* Fallback: also support system preference when no explicit theme is set */
 @media (prefers-color-scheme: dark) {
-  :root {
+  html:not(.light) {
     /* Backgrounds */
     --bg-primary: #1C1C1E;
     --bg-secondary: #000000;
@@ -163,8 +196,12 @@ body {
   background-color: rgba(0, 122, 255, 0.25);
 }
 
+.dark ::selection {
+  background-color: rgba(10, 132, 255, 0.35);
+}
+
 @media (prefers-color-scheme: dark) {
-  ::selection {
+  html:not(.light) ::selection {
     background-color: rgba(10, 132, 255, 0.35);
   }
 }

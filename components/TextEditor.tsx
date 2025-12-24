@@ -127,6 +127,25 @@ export const TextEditor: React.FC<TextEditorProps> = ({
     }, 150);
   }, [onPaste]);
 
+  // Handle Cmd+A to select all text within this editor
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'a') {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      const editor = editorRef.current;
+      if (!editor) return;
+      
+      const selection = window.getSelection();
+      if (!selection) return;
+      
+      const range = document.createRange();
+      range.selectNodeContents(editor);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+  }, []);
+
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     const lineNumbers = document.getElementById(`line-numbers-${side}`);
     if (lineNumbers) {
@@ -203,6 +222,7 @@ export const TextEditor: React.FC<TextEditorProps> = ({
           onBlur={handleBlur}
           onPaste={handlePaste}
           onScroll={handleScroll}
+          onKeyDown={handleKeyDown}
           className="w-full h-full outline-none py-4 px-4 font-mono text-sm leading-6 whitespace-pre-wrap"
           style={{
             minHeight: '100%',
