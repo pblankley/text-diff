@@ -24,42 +24,51 @@ export const DiffViewer: React.FC = () => {
 
   return (
     <div 
-      className="h-screen flex flex-col"
+      className="min-h-screen flex flex-col"
       style={{ backgroundColor: 'var(--bg-secondary)' }}
     >
       {/* Header */}
-      <header 
-        className="flex-shrink-0 px-6 py-4 glass-effect border-b"
-        style={{ 
-          backgroundColor: isDark ? 'rgba(28, 28, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
-          borderColor: 'var(--border-color)'
-        }}
-      >
-        <div className="max-w-screen-2xl mx-auto flex items-center justify-between">
+      <header className="flex-shrink-0 px-6 py-5">
+        <div className="flex items-center justify-between">
+          {/* Logo and Description */}
           <div className="flex items-center gap-4">
-            {/* Logo - switches based on color scheme */}
             <Image
-              src={isDark ? '/diff-logo-light-wide.png' : '/diff-logo-dark-wide.png'}
+              src={isDark ? '/diff-logo-light.png' : '/diff-logo-dark.png'}
               alt="Diff"
-              width={100}
+              width={32}
               height={32}
-              className="h-8 w-auto"
+              className="w-8 h-8"
               priority
             />
-          </div>
-          
-          <div className="flex items-center gap-3">
-            {/* Computing indicator */}
-            {isComputing && (
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full"
-                style={{ backgroundColor: 'var(--bg-tertiary)' }}
+            <div className="flex flex-col">
+              <h1 
+                className="text-sm font-semibold tracking-tight"
+                style={{ color: 'var(--text-primary)' }}
               >
-                <div className="w-2 h-2 rounded-full bg-[var(--accent)] animate-pulse" />
+                Diff
+              </h1>
+              <p 
+                className="text-xs"
+                style={{ color: 'var(--text-tertiary)' }}
+              >
+                Compare text and see changes instantly
+              </p>
+            </div>
+          </div>
+
+          {/* Status indicator */}
+          <div className="flex items-center gap-2">
+            {isComputing && (
+              <div className="flex items-center gap-2">
+                <div 
+                  className="w-2 h-2 rounded-full animate-pulse"
+                  style={{ backgroundColor: 'var(--accent)' }}
+                />
                 <span 
-                  className="text-xs font-medium"
-                  style={{ color: 'var(--text-secondary)' }}
+                  className="text-xs"
+                  style={{ color: 'var(--text-tertiary)' }}
                 >
-                  Analyzing
+                  Analyzing...
                 </span>
               </div>
             )}
@@ -68,49 +77,98 @@ export const DiffViewer: React.FC = () => {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 p-4 md:p-6 overflow-hidden">
+      <main className="flex-1 px-6 pb-6">
         <div 
-          className="h-full rounded-apple-lg overflow-hidden flex"
+          className="h-full rounded-2xl overflow-hidden flex flex-col"
           style={{ 
             backgroundColor: 'var(--bg-primary)',
             boxShadow: isDark 
-              ? '0 4px 24px rgba(0, 0, 0, 0.4), inset 0 0 0 0.5px rgba(255, 255, 255, 0.05)' 
-              : '0 4px 24px rgba(0, 0, 0, 0.08), inset 0 0 0 0.5px rgba(0, 0, 0, 0.04)'
+              ? '0 0 0 1px rgba(255, 255, 255, 0.06), 0 8px 40px rgba(0, 0, 0, 0.5)' 
+              : '0 0 0 1px rgba(0, 0, 0, 0.04), 0 8px 40px rgba(0, 0, 0, 0.08)',
+            minHeight: 'calc(100vh - 120px)'
           }}
         >
-          {/* Left Editor */}
-          <div className="w-1/2 flex flex-col border-r" style={{ borderColor: 'var(--border-color)' }}>
-            <TextEditor
-              value={leftText}
-              onChange={setLeftText}
-              diffLines={diffResult.leftLines}
-              label="Original"
-              side="left"
-              placeholder="Paste or type original text here..."
-            />
+          {/* Panel Headers */}
+          <div 
+            className="flex-shrink-0 grid grid-cols-2 border-b"
+            style={{ borderColor: 'var(--border-color)' }}
+          >
+            <div 
+              className="px-5 py-3 border-r flex items-center justify-between"
+              style={{ borderColor: 'var(--border-color)' }}
+            >
+              <span 
+                className="text-xs font-medium uppercase tracking-wide"
+                style={{ color: 'var(--text-secondary)' }}
+              >
+                Original
+              </span>
+              {leftText && (
+                <span 
+                  className="text-xs tabular-nums"
+                  style={{ color: 'var(--text-tertiary)' }}
+                >
+                  {leftText.split('\n').length} lines
+                </span>
+              )}
+            </div>
+            <div className="px-5 py-3 flex items-center justify-between">
+              <span 
+                className="text-xs font-medium uppercase tracking-wide"
+                style={{ color: 'var(--text-secondary)' }}
+              >
+                Modified
+              </span>
+              {rightText && (
+                <span 
+                  className="text-xs tabular-nums"
+                  style={{ color: 'var(--text-tertiary)' }}
+                >
+                  {rightText.split('\n').length} lines
+                </span>
+              )}
+            </div>
           </div>
 
-          {/* Right Editor */}
-          <div className="w-1/2 flex flex-col">
-            <TextEditor
-              value={rightText}
-              onChange={setRightText}
-              diffLines={diffResult.rightLines}
-              label="Modified"
-              side="right"
-              placeholder="Paste or type modified text here..."
-            />
+          {/* Editor Panels */}
+          <div className="flex-1 grid grid-cols-2 min-h-0">
+            {/* Left Editor */}
+            <div 
+              className="border-r overflow-hidden"
+              style={{ borderColor: 'var(--border-color)' }}
+            >
+              <TextEditor
+                value={leftText}
+                onChange={setLeftText}
+                diffLines={diffResult.leftLines}
+                side="left"
+                placeholder="Paste or type the original text here..."
+              />
+            </div>
+
+            {/* Right Editor */}
+            <div className="overflow-hidden">
+              <TextEditor
+                value={rightText}
+                onChange={setRightText}
+                diffLines={diffResult.rightLines}
+                side="right"
+                placeholder="Paste or type the modified text here..."
+              />
+            </div>
           </div>
         </div>
       </main>
 
-      {/* Footer hint */}
-      <footer 
-        className="flex-shrink-0 px-6 py-3 text-center"
-        style={{ color: 'var(--text-tertiary)' }}
-      >
-        <p className="text-xs">
-          Differences are highlighted automatically after you stop typing
+      {/* Keyboard hint */}
+      <footer className="flex-shrink-0 px-6 pb-4">
+        <p 
+          className="text-center text-xs"
+          style={{ color: 'var(--text-tertiary)' }}
+        >
+          <span style={{ opacity: 0.7 }}>
+            Changes are highlighted after you stop typing
+          </span>
         </p>
       </footer>
     </div>

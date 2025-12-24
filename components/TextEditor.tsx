@@ -7,7 +7,6 @@ interface TextEditorProps {
   value: string;
   onChange: (value: string) => void;
   diffLines: DiffLine[];
-  label: string;
   side: 'left' | 'right';
   placeholder?: string;
 }
@@ -16,13 +15,13 @@ export const TextEditor: React.FC<TextEditorProps> = ({
   value,
   onChange,
   diffLines,
-  label,
   side,
   placeholder = 'Enter text...'
 }) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const isUpdatingRef = useRef(false);
   const [isEmpty, setIsEmpty] = useState(true);
+  const [isFocused, setIsFocused] = useState(false);
 
   // Handle content changes from contentEditable
   const handleInput = useCallback(() => {
@@ -156,50 +155,24 @@ export const TextEditor: React.FC<TextEditorProps> = ({
   });
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div 
-        className="px-4 py-3 border-b flex items-center justify-between"
+    <div className="flex h-full">
+      {/* Line Numbers */}
+      <div
+        id={`line-numbers-${side}`}
+        className="flex-shrink-0 w-12 overflow-hidden text-right select-none font-mono text-xs"
         style={{ 
-          backgroundColor: 'var(--bg-secondary)',
-          borderColor: 'var(--border-color)'
+          backgroundColor: 'var(--line-number-bg)',
+          overflowY: 'hidden',
         }}
       >
-        <span 
-          className="text-sm font-semibold tracking-tight"
-          style={{ color: 'var(--text-primary)' }}
-        >
-          {label}
-        </span>
-        {value && (
-          <span 
-            className="text-xs tabular-nums"
-            style={{ color: 'var(--text-tertiary)' }}
-          >
-            {lineCount} {lineCount === 1 ? 'line' : 'lines'}
-          </span>
-        )}
-      </div>
-
-      {/* Editor Area */}
-      <div className="flex flex-1 overflow-hidden relative">
-        {/* Line Numbers */}
-        <div
-          id={`line-numbers-${side}`}
-          className="flex-shrink-0 w-14 overflow-hidden text-right pr-3 py-4 select-none font-mono text-xs"
-          style={{ 
-            backgroundColor: 'var(--line-number-bg)',
-            overflowY: 'hidden',
-            borderRight: '1px solid var(--border-color)'
-          }}
-        >
+        <div className="py-4 pr-3">
           {Array.from({ length: lineCount }, (_, i) => {
             const lineNum = i + 1;
             const diffType = lineDiffMap.get(lineNum);
             return (
               <div
                 key={lineNum}
-                className={`leading-6 px-1 ${
+                className={`leading-6 rounded-sm ${
                   diffType === 'added' ? 'line-added' :
                   diffType === 'removed' ? 'line-removed' : ''
                 }`}
@@ -210,37 +183,47 @@ export const TextEditor: React.FC<TextEditorProps> = ({
             );
           })}
         </div>
+      </div>
 
-        {/* Editor Container */}
-        <div className="flex-1 overflow-auto editor-scroll relative">
-          {/* Placeholder */}
-          {isEmpty && (
-            <div 
-              className="absolute top-4 left-4 pointer-events-none font-mono text-sm"
-              style={{ color: 'var(--text-tertiary)' }}
-            >
-              {placeholder}
-            </div>
-          )}
-          
-          {/* ContentEditable Editor */}
-          <div
-            ref={editorRef}
-            contentEditable
-            onInput={handleInput}
-            onScroll={handleScroll}
-            className="w-full h-full outline-none py-4 px-4 font-mono text-sm leading-6 whitespace-pre-wrap"
-            style={{
-              minHeight: '100%',
-              wordBreak: 'break-word',
-              color: 'var(--text-primary)',
-              backgroundColor: 'var(--bg-editor)',
-              caretColor: 'var(--accent)'
-            }}
-            spellCheck={false}
-            suppressContentEditableWarning
-          />
-        </div>
+      {/* Subtle separator */}
+      <div 
+        className="w-px flex-shrink-0"
+        style={{ backgroundColor: 'var(--border-color)' }}
+      />
+
+      {/* Editor Container */}
+      <div 
+        className="flex-1 overflow-auto editor-scroll relative"
+        style={{ backgroundColor: 'var(--bg-editor)' }}
+      >
+        {/* Placeholder */}
+        {isEmpty && !isFocused && (
+          <div 
+            className="absolute top-4 left-4 pointer-events-none font-mono text-sm select-none"
+            style={{ color: 'var(--text-tertiary)' }}
+          >
+            {placeholder}
+          </div>
+        )}
+        
+        {/* ContentEditable Editor */}
+        <div
+          ref={editorRef}
+          contentEditable
+          onInput={handleInput}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          onScroll={handleScroll}
+          className="w-full h-full outline-none py-4 px-4 font-mono text-sm leading-6 whitespace-pre-wrap"
+          style={{
+            minHeight: '100%',
+            wordBreak: 'break-word',
+            color: 'var(--text-primary)',
+            caretColor: 'var(--accent)'
+          }}
+          spellCheck={false}
+          suppressContentEditableWarning
+        />
       </div>
     </div>
   );
