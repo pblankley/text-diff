@@ -10,7 +10,7 @@ export const DiffViewer: React.FC = () => {
   const [rightText, setRightText] = useState('');
   const [isDark, setIsDark] = useState(false);
 
-  const { diffResult, isComputing } = useDiff(leftText, rightText);
+  const { diffResult, isComputing, triggerImmediateDiff } = useDiff(leftText, rightText);
 
   // Detect system color scheme
   useEffect(() => {
@@ -143,6 +143,7 @@ export const DiffViewer: React.FC = () => {
                 diffLines={diffResult.leftLines}
                 side="left"
                 placeholder="Paste or type the original text here..."
+                onPaste={triggerImmediateDiff}
               />
             </div>
 
@@ -154,6 +155,7 @@ export const DiffViewer: React.FC = () => {
                 diffLines={diffResult.rightLines}
                 side="right"
                 placeholder="Paste or type the modified text here..."
+                onPaste={triggerImmediateDiff}
               />
             </div>
           </div>
@@ -167,7 +169,7 @@ export const DiffViewer: React.FC = () => {
           style={{ color: 'var(--text-tertiary)' }}
         >
           <span style={{ opacity: 0.7 }}>
-            Changes are highlighted after you stop typing
+            Differences are highlighted when you click outside the editor
           </span>
         </p>
       </footer>

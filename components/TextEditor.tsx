@@ -9,6 +9,7 @@ interface TextEditorProps {
   diffLines: DiffLine[];
   side: 'left' | 'right';
   placeholder?: string;
+  onPaste?: () => void;
 }
 
 export const TextEditor: React.FC<TextEditorProps> = ({
@@ -16,12 +17,18 @@ export const TextEditor: React.FC<TextEditorProps> = ({
   onChange,
   diffLines,
   side,
-  placeholder = 'Enter text...'
+  placeholder = 'Enter text...',
+  onPaste
 }) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const isUpdatingRef = useRef(false);
   const [isEmpty, setIsEmpty] = useState(true);
   const [isFocused, setIsFocused] = useState(false);
+  
+  // Track when we should apply highlights
+  // This is set to true on blur or paste, then reset after applying
+  const [applyHighlightsTrigger, setApplyHighlightsTrigger] = useState(0);
+  const pendingDiffLinesRef = useRef<DiffLine[]>([]);
 
   // Handle content changes from contentEditable
   const handleInput = useCallback(() => {
@@ -40,34 +47,33 @@ export const TextEditor: React.FC<TextEditorProps> = ({
     setIsEmpty(!value);
   }, [value]);
 
-  // Apply diff highlights ONLY when diffLines changes (after debounce completes)
+  // Store diffLines when they update (but don't apply if focused)
   useEffect(() => {
+    pendingDiffLinesRef.current = diffLines;
+    
+    // If not focused, apply highlights immediately when diffLines changes
+    if (!isFocused && diffLines.length > 0) {
+      setApplyHighlightsTrigger(t => t + 1);
+    }
+  }, [diffLines, isFocused]);
+
+  // Apply highlights when triggered (by blur or paste)
+  useEffect(() => {
+    if (applyHighlightsTrigger === 0) return;
+    
     const editor = editorRef.current;
     if (!editor) return;
     
-    if (diffLines.length === 0) return;
+    const currentDiffLines = pendingDiffLinesRef.current;
+    if (currentDiffLines.length === 0) return;
 
     isUpdatingRef.current = true;
 
-    const selection = window.getSelection();
-    let cursorOffset = 0;
-    
-    const isActiveElement = document.activeElement === editor;
-    const selectionInEditor = selection && selection.rangeCount > 0 && editor.contains(selection.anchorNode);
-    const shouldRestoreFocus = isActiveElement || selectionInEditor;
-
-    if (selectionInEditor) {
-      const range = selection.getRangeAt(0);
-      const preCaretRange = range.cloneRange();
-      preCaretRange.selectNodeContents(editor);
-      preCaretRange.setEnd(range.startContainer, range.startOffset);
-      cursorOffset = preCaretRange.toString().length;
-    }
-
+    // Rebuild DOM with highlights
     editor.innerHTML = '';
     const fragment = document.createDocumentFragment();
 
-    diffLines.forEach((diffLine, lineIndex) => {
+    currentDiffLines.forEach((diffLine, lineIndex) => {
       diffLine.segments.forEach((segment) => {
         if (segment.type === 'added' || segment.type === 'removed') {
           const span = document.createElement('span');
@@ -79,7 +85,7 @@ export const TextEditor: React.FC<TextEditorProps> = ({
         }
       });
 
-      if (lineIndex < diffLines.length - 1) {
+      if (lineIndex < currentDiffLines.length - 1) {
         fragment.appendChild(document.createTextNode('\n'));
       }
     });
@@ -87,57 +93,35 @@ export const TextEditor: React.FC<TextEditorProps> = ({
     editor.appendChild(fragment);
     editor.normalize();
 
-    try {
-      if (shouldRestoreFocus) {
-        editor.focus();
-      }
-
-      const newSelection = window.getSelection();
-      const newRange = document.createRange();
-
-      let charCount = 0;
-      let foundPosition = false;
-
-      const findPosition = (node: Node): boolean => {
-        if (node.nodeType === Node.TEXT_NODE) {
-          const textLength = node.textContent?.length || 0;
-          if (charCount + textLength >= cursorOffset) {
-            newRange.setStart(node, Math.min(cursorOffset - charCount, textLength));
-            newRange.collapse(true);
-            foundPosition = true;
-            return true;
-          }
-          charCount += textLength;
-        } else {
-          for (let i = 0; i < node.childNodes.length; i++) {
-            if (findPosition(node.childNodes[i])) {
-              return true;
-            }
-          }
-        }
-        return false;
-      };
-
-      if (editor.childNodes.length > 0) {
-        findPosition(editor);
-      }
-
-      if (!foundPosition) {
-        newRange.selectNodeContents(editor);
-        newRange.collapse(cursorOffset === 0);
-      }
-
-      newSelection?.removeAllRanges();
-      newSelection?.addRange(newRange);
-    } catch (e) {
-      console.error('Cursor restoration error:', e);
-      if (shouldRestoreFocus) {
-        editor.focus();
-      }
-    }
-
     isUpdatingRef.current = false;
-  }, [diffLines]);
+  }, [applyHighlightsTrigger]);
+
+  // Handle focus
+  const handleFocus = useCallback(() => {
+    setIsFocused(true);
+  }, []);
+
+  // Handle blur - trigger highlight application
+  const handleBlur = useCallback(() => {
+    setIsFocused(false);
+    // Apply highlights when losing focus
+    if (pendingDiffLinesRef.current.length > 0) {
+      setApplyHighlightsTrigger(t => t + 1);
+    }
+  }, []);
+
+  // Handle paste - trigger highlight application after paste completes
+  const handlePaste = useCallback(() => {
+    // Notify parent (for immediate diff computation)
+    onPaste?.();
+    
+    // Apply highlights after a short delay to let paste and diff complete
+    setTimeout(() => {
+      if (pendingDiffLinesRef.current.length > 0) {
+        setApplyHighlightsTrigger(t => t + 1);
+      }
+    }, 150);
+  }, [onPaste]);
 
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     const lineNumbers = document.getElementById(`line-numbers-${side}`);
@@ -150,7 +134,7 @@ export const TextEditor: React.FC<TextEditorProps> = ({
   const lineCount = Math.max(lines.length, 1);
 
   const lineDiffMap = new Map<number, 'added' | 'removed' | 'unchanged'>();
-  diffLines.forEach(dl => {
+  pendingDiffLinesRef.current.forEach(dl => {
     lineDiffMap.set(dl.lineNumber, dl.type);
   });
 
@@ -211,8 +195,9 @@ export const TextEditor: React.FC<TextEditorProps> = ({
           ref={editorRef}
           contentEditable
           onInput={handleInput}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          onPaste={handlePaste}
           onScroll={handleScroll}
           className="w-full h-full outline-none py-4 px-4 font-mono text-sm leading-6 whitespace-pre-wrap"
           style={{
